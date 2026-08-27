@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: knowledge-nexus-latam
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: DASH_DEBUG
+        value: "false"
