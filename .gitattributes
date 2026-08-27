@@ -1,0 +1,1 @@
+data/modelo_espanol/*.onnx filter=lfs diff=lfs merge=lfs -text

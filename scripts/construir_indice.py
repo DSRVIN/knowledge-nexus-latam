@@ -47,7 +47,7 @@ def main() -> None:
     print("[4/4] Vectorizando corpus institucional (semántico local + TF-IDF)...")
     textos = {eid: e.texto_indexable() for eid, e in repo.entidades.items()}
     indice = obtener_o_construir_indice(textos)
-    motor = "embeddings locales (fastembed/ONNX)" if indice.motor_semantico_disponible else "TF-IDF (fallback)"
+    motor = "embeddings locales en español (BETO, ONNX)" if indice.motor_semantico_disponible else "TF-IDF (fallback)"
     print(f"      motor semántico: {motor} | {len(indice.ids)} vectores ({time.time() - t3:.1f}s)")
 
     print(f"\nÍndice construido en {time.time() - t0:.1f}s total.")

@@ -19,6 +19,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
+import scipy.sparse as sp
 
 from src import config
 from src.embeddings import IndiceEmbeddings
@@ -30,7 +31,15 @@ from src.trazabilidad import DesgloseScore, Evidencia, Procedencia
 TIPOS_DOCUMENTALES = ("PROJECT", "THESIS", "PUBLICATION", "LINE")
 
 
-def _cos(a: np.ndarray, b: np.ndarray) -> float:
+def _cos(a, b) -> float:
+    """Coseno entre dos vectores. Soporta denso (embeddings semánticos) y
+    disperso (TF-IDF, scipy.sparse) — necesario porque _aplicar_mmr calcula
+    diversidad sobre semánticos cuando existen, y sobre léxicos dispersos
+    como fallback si el motor semántico no está disponible."""
+    if sp.issparse(a) or sp.issparse(b):
+        num = float(a.multiply(b).sum())
+        denom = float(np.sqrt(a.multiply(a).sum())) * float(np.sqrt(b.multiply(b).sum()))
+        return num / denom if denom > 1e-12 else 0.0
     denom = np.linalg.norm(a) * np.linalg.norm(b)
     return float(np.dot(a, b) / denom) if denom > 1e-12 else 0.0
 
@@ -184,7 +193,7 @@ class MotorConexiones:
     # Etapa A: entidades documentales
     # ------------------------------------------------------------------ #
     def _calcular_score(
-        self, eid: str, vec_sem_q: np.ndarray | None, vec_lex_q: np.ndarray, facetas_q: dict, pesos: dict
+        self, eid: str, vec_sem_q: np.ndarray | None, sim_lexica: float, facetas_q: dict, pesos: dict
     ) -> tuple[DesgloseScore, dict]:
         idx = self._id_a_idx[eid]
         entidad = self.repo.entidades[eid]
@@ -194,7 +203,7 @@ class MotorConexiones:
             componentes["semantico"] = pesos["w_sem"] * _cos(vec_sem_q, self.indice.vectores_semanticos[idx])
         else:
             componentes["semantico"] = 0.0
-        componentes["lexico"] = pesos["w_lex"] * _cos(vec_lex_q, self.indice.vectores_lexicos[idx])
+        componentes["lexico"] = pesos["w_lex"] * sim_lexica
 
         facetas_e = self._facetas_entidad[eid]
         jac_tema = _jaccard(facetas_q["tema"], facetas_e["tema"])
@@ -263,13 +272,19 @@ class MotorConexiones:
         pesos = self._pesos_efectivos(pesos or config.PESOS_SCORE)
         vec_sem_q, vec_lex_q = self.indice.vectorizar_consulta(texto_consulta)
         facetas_q = self.vocabulario.extraer(texto_consulta)
+        # una sola multiplicación dispersa contra todo el corpus, en vez de
+        # un _cos por candidato (más rápido y no materializa filas densas)
+        sims_lexicas = self.indice.similitudes_lexicas(vec_lex_q)
 
         candidatos = []
         for eid in self.indice.ids:
             entidad = self.repo.entidades[eid]
             if entidad.tipo not in tipos_destino:
                 continue
-            desglose, facetas_compartidas = self._calcular_score(eid, vec_sem_q, vec_lex_q, facetas_q, pesos)
+            idx = self._id_a_idx[eid]
+            desglose, facetas_compartidas = self._calcular_score(
+                eid, vec_sem_q, float(sims_lexicas[idx]), facetas_q, pesos
+            )
             candidatos.append((eid, desglose, facetas_compartidas))
 
         candidatos.sort(key=lambda c: c[1].total, reverse=True)

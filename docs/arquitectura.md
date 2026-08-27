@@ -14,7 +14,7 @@ flowchart TD
         ING["ingesta.py\nRepositorioInstitucional\n(BOM-safe, normaliza multivalor,\nresuelve confiabilidad por moda)"]
         FAC["facetas.py\nVocabularioFacetas\nTEMA / MÉTODO / DOMINIO\n(extraído del propio dataset)"]
         GRA["grafo.py\nGrafoConocimiento\nNetworkX MultiDiGraph\n(aristas EXPLÍCITAS con procedencia)"]
-        EMB["embeddings.py\nIndiceEmbeddings\nfastembed local (ONNX) + TF-IDF\n(dos señales independientes, caché por hash)"]
+        EMB["embeddings.py\nIndiceEmbeddings\nBETO-es local (ONNX int8) + TF-IDF\n(dos señales independientes, caché por hash)"]
     end
 
     subgraph Artefactos["data/artifacts — persistidos, no en el dataset original"]

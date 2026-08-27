@@ -119,7 +119,7 @@ sidebar = dbc.Card(
 badge_motor = dbc.Alert(
     [
         html.B("Motor: "),
-        "embeddings locales (fastembed/ONNX, offline)" if _indice.motor_semantico_disponible
+        "embeddings locales en español (BETO, ONNX, offline)" if _indice.motor_semantico_disponible
         else "TF-IDF (fallback — motor semántico no disponible en esta máquina)",
         html.Span(f"  ·  {len(_repo.entidades)} entidades  ·  {_grafo.g.number_of_edges()} aristas explícitas", className="text-muted"),
     ],

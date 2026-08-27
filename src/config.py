@@ -31,13 +31,18 @@ RUTA_GRAFO = DIR_ARTIFACTS / "grafo.gpickle"
 RUTA_EMBEDDINGS = DIR_ARTIFACTS / "embeddings.npz"
 RUTA_MANIFIESTO_EMBEDDINGS = DIR_ARTIFACTS / "manifiesto_embeddings.json"
 RUTA_TFIDF = DIR_ARTIFACTS / "tfidf.joblib"
+RUTA_TFIDF_MATRIZ = DIR_ARTIFACTS / "tfidf_matriz.npz"
 RUTA_VOCABULARIO_FACETAS = DIR_ARTIFACTS / "vocabulario_facetas.json"
 
-# --- Modelo de embeddings (100% local, sin claves ni cuotas) ---
-EMBED_MODEL = os.environ.get(
-    "EMBED_MODEL", "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-)
-EMBED_CACHE_DIR = str(RAIZ_PROYECTO / os.environ.get("EMBED_CACHE_DIR", "modelos"))
+# --- Modelo de embeddings (100% local, sin claves ni cuotas ni red en runtime) ---
+# hiiamsid/sentence_similarity_spanish_es (BETO fine-tuned para similitud
+# semántica en español), exportado a ONNX y cuantizado a int8. Vocabulario de
+# 31k tokens (monolingüe) en vez de los 250k del modelo multilingüe original:
+# ver la nota de diseño al inicio de embeddings.py.
+EMBED_MODEL = "hiiamsid/sentence_similarity_spanish_es (ONNX int8, local)"
+DIR_MODELO_ESPANOL = RAIZ_PROYECTO / "data" / "modelo_espanol"
+RUTA_MODELO_ESPANOL_ONNX = DIR_MODELO_ESPANOL / "model_quantized.onnx"
+RUTA_MODELO_ESPANOL_TOKENIZER = DIR_MODELO_ESPANOL / "tokenizer.json"
 
 # --- Capa narrativa opcional (desactivada por defecto) ---
 LLM_HABILITADO = os.environ.get("LLM_HABILITADO", "false").strip().lower() == "true"

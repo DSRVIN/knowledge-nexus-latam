@@ -59,12 +59,14 @@ def test_mmr_con_lambda_1_equivale_a_ranking_puro_por_relevancia(motor):
     consulta = "permanencia estudiantil y riesgo académico"
     candidatos = []
     vec_sem_q, vec_lex_q = motor.indice.vectorizar_consulta(consulta)
+    sims_lexicas = motor.indice.similitudes_lexicas(vec_lex_q)
     facetas_q = motor.vocabulario.extraer(consulta)
     pesos = motor._pesos_efectivos(config.PESOS_SCORE)
     for eid in motor.indice.ids:
         if motor.repo.entidades[eid].tipo != "PROJECT":
             continue
-        desglose, facetas_c = motor._calcular_score(eid, vec_sem_q, vec_lex_q, facetas_q, pesos)
+        idx = motor._id_a_idx[eid]
+        desglose, facetas_c = motor._calcular_score(eid, vec_sem_q, float(sims_lexicas[idx]), facetas_q, pesos)
         candidatos.append((eid, desglose, facetas_c))
     candidatos.sort(key=lambda c: c[1].total, reverse=True)
     ranking_puro = [eid for eid, _, _ in candidatos[:5]]

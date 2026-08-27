@@ -4,7 +4,6 @@ __pycache__/
 .env
 data/processed/
 data/artifacts/
-modelos/
 *.npz
 .pytest_cache/
 .ipynb_checkpoints/

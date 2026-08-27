@@ -39,7 +39,7 @@ exacta (`Data V1.0 / archivo.csv / ID / campo`).
 |---|---|
 | Datos | Python 3.13, `pandas`, `pyarrow` |
 | Grafo de conocimiento | `networkx` (MultiDiGraph), persistido con `pickle` |
-| Embeddings semánticos | `fastembed` + `paraphrase-multilingual-MiniLM-L12-v2` (384 dim, Apache-2.0), **local sobre ONNX Runtime, sin red tras la primera descarga del modelo** |
+| Embeddings semánticos | `hiiamsid/sentence_similarity_spanish_es` (BETO fine-tuned en español, 768 dim), exportado a ONNX y cuantizado a int8, **corrido localmente con `onnxruntime` — sin red en tiempo de ejecución, committeado en el repo** |
 | Señal léxica | `scikit-learn` (TF-IDF) |
 | Interfaz | `dash` + `dash-bootstrap-components` + `plotly` |
 | Capa narrativa | **Opcional y desactivada por defecto** (`LLM_HABILITADO=false`); conector enchufable para Gemini/Groq free tier si se desea prosa generada, nunca sustituye la explicación determinista |
@@ -56,8 +56,13 @@ py -m venv venv --copies
 venv/Scripts/pip install -r requirements.txt
 ```
 
-La primera ejecución descarga el modelo de embeddings (~220 MB, una sola vez, se
-cachea en `modelos/`). Todo lo demás corre offline.
+El modelo de embeddings (ONNX cuantizado, ~111 MB) ya viene en el repositorio
+(`data/modelo_espanol/`, vía Git LFS). No requiere descarga ni red en runtime.
+Se eligió un modelo específico de español (vocabulario ~31k tokens) en vez de
+uno multilingüe (vocabulario ~250k tokens, XLM-R): medido empíricamente, el
+tokenizador multilingüe por sí solo cuesta ~260MB de RAM, lo que no cabe junto
+al resto de la aplicación en hosts con RAM acotada (ej. Render free tier,
+512MB). Ver `scripts/exportar_modelo_espanol.py` para reproducir el export.
 
 ## 4. Ejecución
 
@@ -192,14 +197,21 @@ de palabras clave no basta.
   dataset entre capacidad y proyecto/necesidad).
 - Los umbrales de banda (Alta/Media/Baja) están calibrados sobre Data V1.0 RC2
   específicamente; no se garantiza que generalicen a otro dataset sin recalibrar.
+- El modelo semántico en español discrimina con menos margen que el modelo
+  multilingüe evaluado inicialmente (gap medido ~0.40 vs ~0.78 entre textos
+  relacionados/no relacionados) — un trade-off consciente para caber en hosts
+  con RAM acotada (ver sección 2 y 12). El score híbrido compensa con las
+  señales léxica y de facetas, que no dependen de esta limitación.
 
 ## 12. Declaración de componentes externos
 
-- **Modelo de embeddings**: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
-  (Apache-2.0), ejecutado **localmente** vía `fastembed`/ONNX Runtime. Se usa
-  únicamente para vectorizar texto en 384 dimensiones; no genera contenido ni toma
-  decisiones de puntuación por sí solo (el score es una combinación explícita y
-  auditable de varias señales, ver sección 6).
+- **Modelo de embeddings**: `hiiamsid/sentence_similarity_spanish_es` (BETO
+  fine-tuned para similitud semántica en español), exportado por el equipo a
+  ONNX y cuantizado a int8 (`scripts/exportar_modelo_espanol.py`), ejecutado
+  **localmente** vía `onnxruntime`. Se usa únicamente para vectorizar texto en
+  768 dimensiones; no genera contenido ni toma decisiones de puntuación por sí
+  solo (el score es una combinación explícita y auditable de varias señales,
+  ver sección 6).
 - **Ningún servicio en la nube, API de pago ni modelo generativo** se usa en el camino
   crítico. La capa narrativa opcional (Gemini/Groq, `src/explicacion.py`) está
   **desactivada por defecto** y, si se activa, todo texto que produzca se marca en la
@@ -222,9 +234,10 @@ src/
   evaluacion.py     métricas proxy y ablación
   app.py            dashboard Dash
 scripts/
-  construir_indice.py   pipeline offline idempotente
-  evaluar.py            reporte de métricas
-tests/              45 tests (pytest) cubriendo ingesta, grafo, facetas,
+  construir_indice.py       pipeline offline idempotente
+  evaluar.py                reporte de métricas
+  exportar_modelo_espanol.py  export ONNX del modelo (ya ejecutado, ver data/modelo_espanol/)
+tests/              46 tests (pytest) cubriendo ingesta, grafo, facetas,
                     embeddings, motor y oportunidades/explicación
 docs/
   arquitectura.md          diagrama de lo realmente implementado

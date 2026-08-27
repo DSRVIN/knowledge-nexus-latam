@@ -20,28 +20,33 @@ palabra no encontraría nada. Verificado en `tests/test_facetas.py::test_extraer
 **Salida real del motor** (top-3, tipos proyecto/tesis/línea/publicación):
 
 > Predicción de permanencia estudiantil (línea de investigación LIN-033) se identifica
-> como antecedente relevante (score 0.30, banda Media). Los factores que más pesaron:
-> similitud semántica de contenido (0.23), completitud y confiabilidad de la fuente
-> (0.05). La relación es inferida: no existe una arista explícita para este tipo de
-> vínculo en Data V1.0.
+> como antecedente relevante (score 0.26-0.33 según redacción exacta de la consulta,
+> banda Media). La relación es inferida: no existe una arista explícita para este tipo
+> de vínculo en Data V1.0.
 > **Evidencia**: `Data V1.0 / research_lines.csv / LIN-033 / line_name` |
 > `Data V1.0 / research_lines.csv / LIN-033 / description`
 
 > Estrategia basada en clasificación supervisada para estudiar *student attrition*
-> (proyecto PRJ-004), score 0.27, banda Media.
+> (proyecto PRJ-004), banda Media/Baja según la consulta.
 > **Evidencia**: `Data V1.0 / projects.csv / PRJ-004 / problem_statement`
 
-> Resultados aplicados en bienestar universitario (publicación PUB-279), score 0.26.
-> **Evidencia**: `Data V1.0 / publications.csv / PUB-279 / abstract`
+> Caracterización de permanencia estudiantil en relación con riesgo académico
+> (tesis THS-001) también aparece consistentemente entre los primeros resultados.
+> **Evidencia**: `Data V1.0 / theses.csv / THS-001 / abstract`
 
 **Por qué importa**: la señal léxica pura (TF-IDF) no habría encontrado ninguno de
-estos tres resultados (comparten cero palabras literales con "deserción"). Es el
-motor semántico local (`fastembed`, embeddings de 384 dimensiones) el que reconoce
-que *permanencia estudiantil* y *student attrition* son la misma idea. Esto es
-justo el punto ciego que la propia Guía Oficial usa para explicar por qué un
-"buscador por palabras clave" no basta (§2, §12: "generar recomendaciones con IA sin
-evidencia rastreable" y "presentar coincidencias sin distinguir relevancia" son los
-errores que este caso evita).
+estos resultados (comparten cero palabras literales con "deserción"). Es el motor
+semántico local (BETO en español, embeddings de 768 dimensiones, ejecutado vía
+ONNX Runtime) el que reconoce que *permanencia estudiantil* y *student attrition*
+son la misma idea. Esto es justo el punto ciego que la propia Guía Oficial usa para
+explicar por qué un "buscador por palabras clave" no basta (§2, §12: "generar
+recomendaciones con IA sin evidencia rastreable" y "presentar coincidencias sin
+distinguir relevancia" son los errores que este caso evita). Nota: al pasar del
+modelo multilingüe evaluado inicialmente a uno específico de español (por
+restricciones de memoria en el hosting gratuito, ver README §2), el margen de
+discriminación semántica bajó (de scores ~0.30 a veces a banda Baja); el patrón
+cualitativo — encontrar el antecedente correcto sin coincidencia léxica — se
+mantiene intacto.
 
 ---
 
@@ -50,14 +55,14 @@ errores que este caso evita).
 Muestra la cadena completa **necesidad -> antecedentes -> investigadores reales -> evidencia**,
 y cómo el sistema evita forzar interdisciplinariedad donde no la hay.
 
-**Antecedentes** (Etapa A, banda Alta, scores 0.49-0.67 sobre 8 candidatos).
+**Antecedentes** (Etapa A, banda Media/Alta, scores 0.44-0.50 sobre 8 candidatos).
 
 **Propagación a investigadores** (Etapa B, por aristas reales del grafo):
 
 > Miguel Rodríguez Rojas (investigador INV-071) se conecta a la consulta por autoría
-> o dirección real de las fuentes recuperadas (**score 0.67, banda Alta**). Los
-> factores que más pesaron: **evidencia directa de autoría/dirección (0.49)**,
-> afinidad semántica de perfil, inferida (0.17).
+> o dirección real de las fuentes recuperadas (**score 0.66, banda Alta**). Los
+> factores que más pesaron: **evidencia directa de autoría/dirección (0.46)**,
+> afinidad semántica de perfil, inferida (0.20).
 > **Evidencia**: `Data V1.0 / thesis_advisor.csv / INV-071|THS-081 / role` |
 > `Data V1.0 / researcher_project.csv / INV-071|PRJ-033 / role`
 
@@ -80,7 +85,7 @@ comparten casi cero vocabulario léxico con `projects.keywords`/`theses.keywords
 uno de los casos más difíciles del dataset — y el más honesto para demostrar que el
 sistema no infla su confianza cuando la señal es débil.
 
-**Antecedentes**: banda **Media** en todos los resultados (scores 0.28-0.29, muy por
+**Antecedentes**: banda **Media** en todos los resultados (scores 0.29-0.31, por
 debajo del 0.45+ típico de necesidades con plantilla léxica limpia — ver calibración
 de bandas en `src/motor.py::_banda`). El sistema no finge certeza que no tiene.
 
@@ -88,18 +93,19 @@ de bandas en `src/motor.py::_banda`). El sistema no finge certeza que no tiene.
 
 | Investigador | Facultad | Score |
 |---|---|---|
-| Alejandro Salazar Martínez | FAC-006 | 0.41 |
-| David Pérez Vargas | FAC-004 | 0.35 |
-| Ana Gómez López | FAC-001 | 0.32 |
+| Carolina Rojas Silva | FAC-005 | 0.38 |
+| Alejandro Salazar Martínez | FAC-004 | 0.34 |
+| Natalia Valencia Suárez | FAC-002 | 0.34 |
+| Nicolás Arias Gómez | FAC-006 | 0.33 |
 
 **Oportunidad `COLLABORATION` generada**:
 
-> Alejandro Salazar Martínez (FAC-006) y David Pérez Vargas (FAC-004) llegan a esta
+> Carolina Rojas Silva (FAC-005) y Alejandro Salazar Martínez (FAC-004) llegan a esta
 > necesidad por evidencia independiente y pertenecen a facultades distintas: su
 > combinación amplía el abordaje más allá de un solo dominio. (Prioridad: Media)
 
-Se generan 3 oportunidades de este tipo (una por cada par de las 3 facultades
-representadas). Todas quedan etiquetadas con prioridad **Media**, consistente con la
+Se generan 3 oportunidades de este tipo (una por cada par de las facultades mejor
+posicionadas). Todas quedan etiquetadas con prioridad **Media**, consistente con la
 confianza real del antecedente — no se les asigna "Alta" solo porque cruzan
 facultades, porque la fórmula de prioridad (`src/oportunidades.py::_prioridad`)
 pondera explícitamente la relevancia del antecedente, no solo el tipo de oportunidad.

@@ -1,8 +1,10 @@
 pandas>=2.2,<3
 numpy
 scikit-learn
+scipy
 networkx
-fastembed
+onnxruntime
+tokenizers
 dash>=2.18,<3
 dash-bootstrap-components
 python-dotenv

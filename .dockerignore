@@ -7,5 +7,4 @@ __pycache__/
 tests/
 data/processed/
 data/artifacts/
-modelos/
 .env
