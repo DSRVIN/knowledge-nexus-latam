@@ -1,0 +1,11 @@
+pandas>=2.2,<3
+numpy
+scikit-learn
+networkx
+fastembed
+dash>=2.18,<3
+dash-bootstrap-components
+python-dotenv
+pyarrow
+joblib
+pytest

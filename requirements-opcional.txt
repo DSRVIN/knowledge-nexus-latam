@@ -1,0 +1,4 @@
+# Capa LLM opcional para narrar explicaciones en prosa.
+# Desactivada por defecto (LLM_HABILITADO=false en .env). El sistema es
+# 100% funcional sin esto: solo instalar si se quiere activar el narrador.
+google-genai

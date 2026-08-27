@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.git/
+.pytest_cache/
+.claude/
+tests/
+data/processed/
+data/artifacts/
+modelos/
+.env

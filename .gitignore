@@ -1,0 +1,10 @@
+venv/
+__pycache__/
+*.pyc
+.env
+data/processed/
+data/artifacts/
+modelos/
+*.npz
+.pytest_cache/
+.ipynb_checkpoints/
