@@ -184,6 +184,7 @@ app.layout = dbc.Container(
                                     dbc.Tab(label="Conexiones", tab_id="tab-conexiones"),
                                     dbc.Tab(label="Grafo", tab_id="tab-grafo"),
                                     dbc.Tab(label="Oportunidades", tab_id="tab-oportunidades"),
+                                    dbc.Tab(label="🎯 Ruta de Aprendizaje", tab_id="tab-ruta"),
                                     dbc.Tab(label="¿Por qué A antes que B?", tab_id="tab-comparador"),
                                 ],
                             ),
@@ -540,6 +541,121 @@ def _render_grafo(data: dict):
     )
 
 
+# --------------------------------------------------------------------- #
+# Ruta de aprendizaje: guía paso a paso ensamblada a partir de los MISMOS
+# resultados reales ya calculados para la consulta actual (sin datos
+# inventados ni fases fijas: si una categoría no tiene resultados, la fase
+# lo dice honestamente en vez de simular contenido).
+# --------------------------------------------------------------------- #
+def _fase_ruta(numero: int, titulo: str, subtitulo: str, estado: str, contenido):
+    colores = {"completado": "#059669", "activo": "#ea580c", "pendiente": "#94a3b8"}
+    color = colores[estado]
+    icono = "✓" if estado == "completado" else str(numero)
+    return html.Div(
+        [
+            html.Div(icono, className="knl-fase-circulo", style={"background": color, "borderColor": color}),
+            dbc.Card(
+                dbc.CardBody(
+                    [
+                        html.Div([html.B(titulo), html.Span(f"  ·  {subtitulo}", className="text-muted small")]),
+                        html.Div(contenido, className="mt-2"),
+                    ]
+                ),
+                className="knl-fase-card",
+                style={"borderLeft": f"3px solid {color}"},
+            ),
+        ],
+        className="knl-fase-fila",
+    )
+
+
+def _render_ruta(data: dict):
+    if not data:
+        return dbc.Alert(
+            "Ejecutá una búsqueda (en el buscador o en el Asistente) para generar una ruta sugerida.",
+            color="light",
+        )
+
+    resultados_a = data["resultados_a"]
+    investigadores = data["investigadores"]
+    grupos = data["grupos"]
+    asignaturas = data["asignaturas"]
+    oportunidades = data["oportunidades"]
+    fases = []
+
+    if resultados_a:
+        contenido = html.Ul(
+            [
+                html.Li(f"{c['destino']['nombre']} ({c['destino']['tipo']}) — banda {c['banda']}, score {c['relevancia']:.2f}")
+                for c in resultados_a[:3]
+            ]
+        )
+        estado = "completado"
+    else:
+        contenido = html.P("No se encontraron antecedentes claros para esta consulta.", className="text-muted mb-0")
+        estado = "pendiente"
+    fases.append(_fase_ruta(1, "Diagnóstico de antecedentes", "motor híbrido, datos reales", estado, contenido))
+
+    if investigadores or grupos:
+        items = []
+        if investigadores:
+            top = investigadores[0]
+            items.append(html.Li(f"{top['destino']['nombre']} — conectado por autoría/dirección real (score {top['relevancia']:.2f})"))
+        if grupos:
+            top_g = grupos[0]
+            items.append(html.Li(f"Grupo {top_g['destino']['nombre']} — vinculado por proyecto o línea real"))
+        contenido = html.Ul(items)
+        estado = "completado"
+    else:
+        contenido = html.P("No se identificaron investigadores o grupos conectados directamente.", className="text-muted mb-0")
+        estado = "pendiente"
+    fases.append(_fase_ruta(2, "Personas y grupos conectados", "propagación por grafo real", estado, contenido))
+
+    curricular = [o for o in oportunidades if o["type"] == "CURRICULAR_INTEGRATION"]
+    if curricular:
+        o = curricular[0]
+        contenido = html.Div(
+            [html.P(o["reason"], className="mb-1"), html.Small("Entidades: " + ", ".join(o["related_entities"]), className="text-muted")]
+        )
+        estado = "activo"
+    elif asignaturas:
+        top_a = asignaturas[0]
+        contenido = html.P(
+            f"Asignatura más cercana temáticamente: {top_a['destino']['nombre']} (banda {top_a['banda']}), "
+            "sin brecha ni integración marcada explícitamente para esta consulta.",
+            className="mb-0",
+        )
+        estado = "activo"
+    else:
+        contenido = html.P(
+            "No se detectó una conexión curricular clara para esta consulta — conviene revisarlo manualmente "
+            "con el programa académico relacionado.",
+            className="text-muted mb-0",
+        )
+        estado = "pendiente"
+    fases.append(_fase_ruta(3, "Articulación curricular", "brechas y coberturas reales", estado, contenido))
+
+    contenido = html.Ul(
+        [
+            html.Li("Validar los hallazgos con las personas identificadas en el paso anterior."),
+            html.Li("Presentar la propuesta al comité curricular o a la dirección académica correspondiente."),
+            html.Li("Dar seguimiento institucional y registrar lo que finalmente se implemente."),
+        ]
+    )
+    fases.append(_fase_ruta(4, "Próximos pasos institucionales", "guía general — no calculada por el sistema", "pendiente", contenido))
+
+    return html.Div(
+        [
+            html.P(
+                "Ruta sugerida a partir de los resultados reales de la consulta actual. No reemplaza el juicio "
+                "académico — es un punto de partida trazable, no una decisión automática.",
+                className="text-muted small mb-3",
+            ),
+            html.Div(fases, className="knl-ruta-timeline"),
+        ]
+    )
+
+
 def _render_comparador(data: dict):
     if not data:
         return dbc.Alert("Ejecuta una búsqueda primero.", color="light")
@@ -575,6 +691,8 @@ def _renderizar_tab(tab, data, historial_chat):
         return _render_grafo(data)
     if tab == "tab-oportunidades":
         return _render_oportunidades(data)
+    if tab == "tab-ruta":
+        return _render_ruta(data)
     if tab == "tab-comparador":
         return _render_comparador(data)
     return html.Div()
