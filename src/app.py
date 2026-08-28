@@ -25,6 +25,7 @@ from src.grafo import GrafoConocimiento
 from src.ingesta import RepositorioInstitucional
 from src.motor import TIPOS_DOCUMENTALES, MotorConexiones
 from src.oportunidades import GeneradorOportunidades
+from src.asistente import generar_respuesta_asistente
 
 # --------------------------------------------------------------------- #
 # Estado del proceso: construido una sola vez al arrancar
@@ -131,6 +132,7 @@ app.layout = dbc.Container(
     fluid=True,
     children=[
         dcc.Store(id="store-resultados"),
+        dcc.Store(id="store-chat-historial", data=[]),
         html.H3("Knowledge Nexus LATAM", className="mt-3"),
         html.P("Conectar el conocimiento: de una necesidad institucional a oportunidades priorizadas y trazables.", className="text-muted"),
         badge_motor,
@@ -141,8 +143,9 @@ app.layout = dbc.Container(
                     [
                         dbc.Tabs(
                             id="tabs",
-                            active_tab="tab-conexiones",
+                            active_tab="tab-asistente",
                             children=[
+                                dbc.Tab(label="🤖 Asistente", tab_id="tab-asistente"),
                                 dbc.Tab(label="Conexiones", tab_id="tab-conexiones"),
                                 dbc.Tab(label="Grafo", tab_id="tab-grafo"),
                                 dbc.Tab(label="Oportunidades", tab_id="tab-oportunidades"),
@@ -173,26 +176,12 @@ def _autocompletar_consulta(necesidad_id):
 # --------------------------------------------------------------------- #
 # Búsqueda principal: consulta -> conexiones -> oportunidades
 # --------------------------------------------------------------------- #
-@app.callback(
-    Output("store-resultados", "data"),
-    Input("btn-buscar", "n_clicks"),
-    State("txt-consulta", "value"),
-    State("dd-necesidad", "value"),
-    State("chk-tipos", "value"),
-    State("in-topk", "value"),
-    State("sl-w_sem", "value"), State("sl-w_lex", "value"), State("sl-w_tema", "value"),
-    State("sl-w_dominio", "value"), State("sl-w_metodo", "value"), State("sl-w_evidencia", "value"),
-    prevent_initial_call=True,
-)
-def _buscar(n_clicks, texto, necesidad_id, tipos, top_k, w_sem, w_lex, w_tema, w_dominio, w_metodo, w_evidencia):
-    if not texto or not texto.strip():
-        return dash.no_update
+def _ejecutar_pipeline(texto: str, necesidad_id: str = None, tipos: tuple = None, top_k: int = None, pesos: dict = None) -> dict:
+    """Corre el pipeline completo (Etapa A + Etapa B + oportunidades) sobre un
+    texto de consulta. Compartido por el buscador principal y el asistente de
+    chat: misma lógica, mismos resultados, un solo lugar para mantenerla."""
     top_k = int(top_k or config.TOP_K_DEFECTO)
     tipos = tuple(tipos) if tipos else TIPOS_DOCUMENTALES
-    pesos = {
-        "w_sem": w_sem, "w_lex": w_lex, "w_tema": w_tema,
-        "w_dominio": w_dominio, "w_metodo": w_metodo, "w_evidencia": w_evidencia,
-    }
     prioridad = _repo.entidades[necesidad_id].valor("priority") if necesidad_id else "MEDIUM"
 
     resultados_a = _motor.buscar(texto, tipos_destino=tipos, top_k=top_k, pesos=pesos)
@@ -217,6 +206,27 @@ def _buscar(n_clicks, texto, necesidad_id, tipos, top_k, w_sem, w_lex, w_tema, w
         "capacidades": [c.to_dict() for c in capacidades],
         "oportunidades": [o.to_dict() for o in oportunidades],
     }
+
+
+@app.callback(
+    Output("store-resultados", "data"),
+    Input("btn-buscar", "n_clicks"),
+    State("txt-consulta", "value"),
+    State("dd-necesidad", "value"),
+    State("chk-tipos", "value"),
+    State("in-topk", "value"),
+    State("sl-w_sem", "value"), State("sl-w_lex", "value"), State("sl-w_tema", "value"),
+    State("sl-w_dominio", "value"), State("sl-w_metodo", "value"), State("sl-w_evidencia", "value"),
+    prevent_initial_call=True,
+)
+def _buscar(n_clicks, texto, necesidad_id, tipos, top_k, w_sem, w_lex, w_tema, w_dominio, w_metodo, w_evidencia):
+    if not texto or not texto.strip():
+        return dash.no_update
+    pesos = {
+        "w_sem": w_sem, "w_lex": w_lex, "w_tema": w_tema,
+        "w_dominio": w_dominio, "w_metodo": w_metodo, "w_evidencia": w_evidencia,
+    }
+    return _ejecutar_pipeline(texto, necesidad_id=necesidad_id, tipos=tipos, top_k=top_k, pesos=pesos)
 
 
 # --------------------------------------------------------------------- #
@@ -262,6 +272,106 @@ def _tarjeta_conexion(c: dict, idx_key: str):
         ],
         item_id=idx_key,
     )
+
+
+# --------------------------------------------------------------------- #
+# Asistente conversacional (pestaña de entrada, pensada para usuarios
+# nuevos: estudiantes o personal administrativo sin experiencia previa
+# con la herramienta).
+# --------------------------------------------------------------------- #
+_MENSAJE_BIENVENIDA_ASISTENTE = (
+    "¡Hola! 👋 Soy el asistente de Knowledge Nexus LATAM. Contame, en tus propias "
+    "palabras, qué necesidad, problema o proyecto tenés en mente — por ejemplo "
+    "\"quiero reducir la deserción en primer año\" o \"necesito apoyo para un "
+    "proyecto de monitoreo ambiental\" — y te ayudo a encontrar proyectos, "
+    "personas y oportunidades relacionadas en la universidad. No hace falta que "
+    "uses términos técnicos, con que me cuentes tu idea alcanza."
+)
+
+
+def _burbuja_chat(mensaje: dict):
+    es_usuario = mensaje["role"] == "user"
+    cuerpo = [html.Div(mensaje["content"], style={"whiteSpace": "pre-wrap"})]
+    if not es_usuario and mensaje.get("citas"):
+        cuerpo.append(
+            html.Div(
+                [html.Small("Evidencia: " + " | ".join(mensaje["citas"]), className="text-muted")],
+                className="mt-1",
+            )
+        )
+    if not es_usuario and "generado_por_ia" in mensaje:
+        etiqueta = "🤖 IA (OpenRouter)" if mensaje["generado_por_ia"] else "📋 respuesta automática (sin IA)"
+        cuerpo.insert(0, html.Small(etiqueta, className="text-muted d-block mb-1"))
+    return html.Div(
+        dbc.Card(dbc.CardBody(cuerpo), className="mb-2", style={"maxWidth": "80%"}),
+        className="d-flex justify-content-end" if es_usuario else "d-flex justify-content-start",
+    )
+
+
+def _render_asistente(historial: list):
+    historial = historial or []
+    mensajes = [
+        html.Div(
+            dbc.Alert(_MENSAJE_BIENVENIDA_ASISTENTE, color="light", className="mb-2"),
+        )
+    ] + [_burbuja_chat(m) for m in historial]
+    return html.Div(
+        [
+            html.Div(mensajes, id="chat-mensajes", style={"minHeight": "350px"}),
+            dbc.InputGroup(
+                [
+                    dbc.Input(
+                        id="txt-chat-mensaje",
+                        placeholder="Escribí tu consulta acá y presioná Enter...",
+                        type="text",
+                        n_submit=0,
+                    ),
+                    dbc.Button("Enviar", id="btn-chat-enviar", color="primary", n_clicks=0),
+                ],
+                className="mt-2",
+            ),
+            html.Small(
+                "Este asistente resume resultados reales del sistema (no inventa datos). "
+                "El detalle técnico completo está en las otras pestañas.",
+                className="text-muted d-block mt-1",
+            ),
+        ]
+    )
+
+
+@app.callback(
+    Output("store-chat-historial", "data"),
+    Output("txt-chat-mensaje", "value"),
+    Input("btn-chat-enviar", "n_clicks"),
+    Input("txt-chat-mensaje", "n_submit"),
+    State("txt-chat-mensaje", "value"),
+    State("store-chat-historial", "data"),
+    prevent_initial_call=True,
+)
+def _enviar_mensaje_chat(n_clicks, n_submit, mensaje, historial):
+    if not mensaje or not mensaje.strip():
+        return dash.no_update, dash.no_update
+    historial = list(historial or [])
+    historial.append({"role": "user", "content": mensaje})
+
+    resultado = _ejecutar_pipeline(mensaje, top_k=5)
+    historial_llm = [{"role": m["role"], "content": m["content"]} for m in historial[:-1]]
+    respuesta = generar_respuesta_asistente(
+        mensaje,
+        resultado["resultados_a"],
+        resultado["investigadores"],
+        resultado["oportunidades"],
+        historial=historial_llm,
+    )
+    historial.append(
+        {
+            "role": "assistant",
+            "content": respuesta.texto,
+            "generado_por_ia": respuesta.generado_por_ia,
+            "citas": respuesta.citas,
+        }
+    )
+    return historial, ""
 
 
 def _render_conexiones(data: dict):
@@ -413,8 +523,15 @@ def _render_comparador(data: dict):
     )
 
 
-@app.callback(Output("contenido-tab", "children"), Input("tabs", "active_tab"), Input("store-resultados", "data"))
-def _renderizar_tab(tab, data):
+@app.callback(
+    Output("contenido-tab", "children"),
+    Input("tabs", "active_tab"),
+    Input("store-resultados", "data"),
+    Input("store-chat-historial", "data"),
+)
+def _renderizar_tab(tab, data, historial_chat):
+    if tab == "tab-asistente":
+        return _render_asistente(historial_chat)
     if tab == "tab-conexiones":
         return _render_conexiones(data)
     if tab == "tab-grafo":

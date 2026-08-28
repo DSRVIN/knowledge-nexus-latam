@@ -48,6 +48,31 @@ RUTA_MODELO_ESPANOL_TOKENIZER = DIR_MODELO_ESPANOL / "tokenizer.json"
 LLM_HABILITADO = os.environ.get("LLM_HABILITADO", "false").strip().lower() == "true"
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 
+# --- Asistente conversacional (pestaña "Asistente", vía OpenRouter) ---
+# Se activa solo si hay API key configurada; si falla o no hay key, la
+# pestaña sigue funcionando con una narración determinista de respaldo
+# (nunca se cae la demo completa por depender de un tercero).
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+ASISTENTE_HABILITADO = bool(OPENROUTER_API_KEY)
+# Orden de intento, calibrado empíricamente (no solo por lo que lista la
+# documentación): probamos varios modelos :free reales y minimax-m2.7 fue
+# el único que respondió limpio al primer intento — gemma-4 y glm-5.2
+# devolvieron 429 (pool compartido gratuito saturado en ese momento, un
+# riesgo real y no solo teórico). openrouter/free (auto-router) queda último
+# a propósito: puede enrutar a un modelo "razonador" que gasta tokens
+# pensando antes de responder y devuelve la respuesta cortada a mitad de
+# camino si max_tokens no alcanza — observado en pruebas reales.
+OPENROUTER_MODELOS = [
+    m.strip()
+    for m in os.environ.get(
+        "OPENROUTER_MODELOS",
+        "minimax/minimax-m2.7:free,google/gemma-4-31b-it:free,z-ai/glm-5.2:free,openrouter/free",
+    ).split(",")
+    if m.strip()
+]
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+OPENROUTER_TIMEOUT_SEG = 20
+
 # --- Conteos esperados según los manifiestos oficiales del dataset ---
 # Usados por tests/test_ingesta.py para detectar corrupción silenciosa en la carga.
 CONTEOS_ESPERADOS = {

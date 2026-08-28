@@ -7,6 +7,7 @@ onnxruntime
 tokenizers
 dash>=2.18,<3
 dash-bootstrap-components
+requests
 python-dotenv
 pyarrow
 joblib
