@@ -125,3 +125,43 @@ body {
 .knl-chat-burbuja {
   max-width: 80%;
 }
+
+/* ---------- Ruta de aprendizaje (timeline) ---------- */
+.knl-ruta-timeline {
+  position: relative;
+  padding-left: 4px;
+}
+.knl-fase-fila {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+  padding-bottom: 18px;
+}
+.knl-fase-fila:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 17px;
+  top: 36px;
+  bottom: -4px;
+  width: 2px;
+  background: #e2e8f0;
+}
+.knl-fase-circulo {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  z-index: 1;
+}
+.knl-fase-card {
+  flex: 1;
+  border-radius: 10px !important;
+}
