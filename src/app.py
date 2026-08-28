@@ -117,40 +117,77 @@ sidebar = dbc.Card(
     className="mb-3",
 )
 
-badge_motor = dbc.Alert(
-    [
-        html.B("Motor: "),
-        "embeddings locales en español (BETO, ONNX, offline)" if _indice.motor_semantico_disponible
-        else "TF-IDF (fallback — motor semántico no disponible en esta máquina)",
-        html.Span(f"  ·  {len(_repo.entidades)} entidades  ·  {_grafo.g.number_of_edges()} aristas explícitas", className="text-muted"),
+_motor_disponible = _indice.motor_semantico_disponible
+_logo_svg = """
+<svg width="34" height="34" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="18" cy="18" r="17" stroke="#ea580c" stroke-width="1.5" />
+  <circle cx="18" cy="18" r="17" fill="#ea580c" fill-opacity="0.08" />
+  <path d="M12 25 L18 11 L24 25" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" fill="none" />
+  <path d="M14.5 21h7" stroke="white" stroke-width="1.8" stroke-linecap="round" />
+  <circle cx="23" cy="14.5" r="4" stroke="#ea580c" stroke-width="1.4" fill="none" />
+  <path d="M26 17.5 L28.5 20" stroke="#ea580c" stroke-width="1.8" stroke-linecap="round" />
+</svg>
+"""
+
+header = html.Div(
+    className="knl-header",
+    children=[
+        html.Div(
+            className="d-flex align-items-center gap-2",
+            children=[
+                html.Img(
+                    src="data:image/svg+xml;utf8," + _logo_svg.replace("#", "%23").replace("\n", ""),
+                    style={"width": "34px", "height": "34px"},
+                ),
+                html.Div(
+                    [
+                        html.P(["Knowledge Nexus ", html.Span("LATAM")], className="knl-brand"),
+                        html.P("Conectar el conocimiento institucional, con evidencia y trazabilidad", className="knl-tagline"),
+                    ]
+                ),
+            ],
+        ),
+        html.Div(
+            className=f"knl-engine-badge{'' if _motor_disponible else ' knl-degraded'}",
+            children=[
+                html.Span(className="knl-dot"),
+                html.Span(
+                    "Motor: BETO ONNX local (offline)" if _motor_disponible else "Motor: TF-IDF (fallback)"
+                ),
+                html.Span(" · ", style={"opacity": 0.5}),
+                html.Span(f"{len(_repo.entidades)} entidades"),
+                html.Span(" · ", style={"opacity": 0.5}),
+                html.Span(f"{_grafo.g.number_of_edges()} aristas"),
+            ],
+        ),
     ],
-    color="info" if _indice.motor_semantico_disponible else "warning",
-    className="py-2 mb-3",
 )
 
 app.layout = dbc.Container(
     fluid=True,
+    className="pt-3",
     children=[
         dcc.Store(id="store-resultados"),
         dcc.Store(id="store-chat-historial", data=[]),
-        html.H3("Knowledge Nexus LATAM", className="mt-3"),
-        html.P("Conectar el conocimiento: de una necesidad institucional a oportunidades priorizadas y trazables.", className="text-muted"),
-        badge_motor,
+        header,
         dbc.Row(
             [
                 dbc.Col(sidebar, md=3),
                 dbc.Col(
                     [
-                        dbc.Tabs(
-                            id="tabs",
-                            active_tab="tab-asistente",
-                            children=[
-                                dbc.Tab(label="🤖 Asistente", tab_id="tab-asistente"),
-                                dbc.Tab(label="Conexiones", tab_id="tab-conexiones"),
-                                dbc.Tab(label="Grafo", tab_id="tab-grafo"),
-                                dbc.Tab(label="Oportunidades", tab_id="tab-oportunidades"),
-                                dbc.Tab(label="¿Por qué A antes que B?", tab_id="tab-comparador"),
-                            ],
+                        html.Div(
+                            dbc.Tabs(
+                                id="tabs",
+                                active_tab="tab-asistente",
+                                children=[
+                                    dbc.Tab(label="🤖 Asistente", tab_id="tab-asistente"),
+                                    dbc.Tab(label="Conexiones", tab_id="tab-conexiones"),
+                                    dbc.Tab(label="Grafo", tab_id="tab-grafo"),
+                                    dbc.Tab(label="Oportunidades", tab_id="tab-oportunidades"),
+                                    dbc.Tab(label="¿Por qué A antes que B?", tab_id="tab-comparador"),
+                                ],
+                            ),
+                            className="knl-tabs",
                         ),
                         html.Div(id="contenido-tab", className="mt-3"),
                     ],

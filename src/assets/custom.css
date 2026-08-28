@@ -1,0 +1,127 @@
+/* Rediseño visual inspirado en la maqueta de Figma (header oscuro + acento
+   naranja + tabs tipo píldora). Sin fuentes externas a propósito: el
+   proyecto es 100% offline y no debe depender de una CDN para verse bien. */
+
+:root {
+  --knl-navy: #0f172a;
+  --knl-navy-2: #1e293b;
+  --knl-orange: #ea580c;
+  --knl-orange-dark: #c2410c;
+  --knl-emerald: #059669;
+  --knl-amber: #d97706;
+  --knl-slate: #64748b;
+  --knl-pink: #db2777;
+}
+
+body {
+  background-color: #f8fafc;
+}
+
+/* ---------- Header ---------- */
+.knl-header {
+  background: linear-gradient(135deg, var(--knl-navy) 0%, var(--knl-navy-2) 100%);
+  border-radius: 14px;
+  padding: 14px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+.knl-header .knl-brand {
+  color: #fff;
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+.knl-header .knl-brand span {
+  color: var(--knl-orange);
+}
+.knl-header .knl-tagline {
+  color: #94a3b8;
+  font-size: 0.78rem;
+  margin: 0;
+}
+.knl-engine-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  border-radius: 999px;
+  padding: 6px 14px;
+  color: #cbd5e1;
+  font-size: 0.75rem;
+  font-family: "Consolas", "Courier New", monospace;
+}
+.knl-engine-badge .knl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--knl-emerald);
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.25);
+  display: inline-block;
+}
+.knl-engine-badge.knl-degraded .knl-dot {
+  background: var(--knl-amber);
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.25);
+}
+
+/* ---------- Sidebar ---------- */
+.knl-sidebar-section {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 0.6rem;
+}
+.knl-btn-primary {
+  background: linear-gradient(135deg, var(--knl-orange) 0%, var(--knl-orange-dark) 100%) !important;
+  border: none !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+}
+.knl-btn-primary:hover {
+  opacity: 0.92;
+}
+
+/* ---------- Tabs tipo píldora ---------- */
+.knl-tabs .nav-tabs {
+  border-bottom: none;
+  background: #eef2f7;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+.knl-tabs .nav-tabs .nav-link {
+  border: none !important;
+  border-radius: 9px !important;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 8px 16px;
+}
+.knl-tabs .nav-tabs .nav-link:hover {
+  color: #1e293b;
+  background: rgba(255, 255, 255, 0.6);
+}
+.knl-tabs .nav-tabs .nav-link.active {
+  background: #fff !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+/* ---------- Citas de evidencia ---------- */
+.knl-cita {
+  font-family: "Consolas", "Courier New", monospace;
+  color: var(--knl-pink);
+  font-size: 0.78rem;
+}
+
+/* ---------- Chat del asistente ---------- */
+.knl-chat-burbuja {
+  max-width: 80%;
+}
